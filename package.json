@@ -1,0 +1,44 @@
+{
+  "name": "Hofflabs Public API",
+  "version": "0.0.1",
+  "scripts": {
+    "start": "bun run src/index.ts",
+    "dev": "bun --watch run src/index.ts",
+    "test": "TEST_MODE=true bun test src/tests/*.test.ts",
+    "test:watch": "bun test --watch src/tests/*.test.ts",
+    "test:coverage": "bun test --coverage src/tests/*.test.ts",
+    "test:auth": "bun test src/tests/auth.test.ts",
+    "test:enhanced-auth": "bun test src/tests/enhanced-auth.test.ts",
+    "test:jwt": "bun test src/tests/jwt.test.ts",
+    "test:crypto": "bun test src/tests/crypto.test.ts",
+    "test:api": "bun test src/tests/api.test.ts",
+    "test:integration": "bun test src/tests/api.test.ts",
+    "test:unit": "bun test src/tests/auth.test.ts src/tests/jwt.test.ts src/tests/crypto.test.ts",
+    "test:security": "bun test src/tests/enhanced-auth.test.ts",
+    "test:email": "bun test src/tests/email.test.ts"
+  },
+  "dependencies": {
+    "@fastify/cookie": "^11.0.2",
+    "@fastify/cors": "^10.0.0",
+    "@fastify/helmet": "^12.0.0",
+    "@fastify/jwt": "^9.0.0",
+    "@fastify/rate-limit": "^10.0.0",
+    "@fastify/swagger": "^9.5.1",
+    "@fastify/swagger-ui": "^5.2.3",
+    "@types/nodemailer": "^6.4.17",
+    "@types/pg": "^8.15.4",
+    "axios": "^1.7.7",
+    "bcryptjs": "^3.0.2",
+    "fastify": "^5.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "nodemailer": "^7.0.3",
+    "pg": "^8.16.2"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.2.17",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "^22.7.4",
+    "tsx": "^4.19.1",
+    "typescript": "^5.6.2"
+  }
+}
