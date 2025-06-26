@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, afterAll } from 'bun:test';
 import runDbSync from '../database/utils/sync';
 
 // Helper functions for API testing
-const BASE_URL = process.env.BACKEND_API_URL+'/auth/health';
+const BASE_URL = process.env.BACKEND_API_URL || 'http://localhost:3030';
 
 async function makeRequest(endpoint: string, options: RequestInit = {}) {
   const response = await fetch(`${BASE_URL}${endpoint}`, {

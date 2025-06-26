@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll } from 'bun:test';
 import runDbSync from '../database/utils/sync';
-import { loginService, registerService } from '../services/auth';
+import { loginService, registerService } from '../services/auth/auth';
 import { readSelect } from '../database/utils/operations';
 import { User } from '../interfaces/auth/user';
 

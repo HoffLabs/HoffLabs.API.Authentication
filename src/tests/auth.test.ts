@@ -1,23 +1,23 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'bun:test';
-import { loginService, registerService } from '../services/auth';
-import { refreshTokenService, validateRefreshTokenService } from '../services/refresh';
+import { loginService, registerService } from '../services/auth/auth';
+import { refreshTokenService, validateRefreshTokenService } from '../services/auth/refresh';
 import { 
   getProfileService, 
   updateProfileService, 
   changePasswordService,
   deleteAccountService 
-} from '../services/profile';
+} from '../services/auth/profile';
 import {
   getActiveSessionsService,
   revokeSessionService,
   revokeAllOtherSessionsService,
   getLoginHistoryService
-} from '../services/sessions';
+} from '../services/auth/sessions';
 import {
   requestPasswordResetService,
   validateResetTokenService,
   resetPasswordService
-} from '../services/passwordReset';
+} from '../services/auth/passwordReset';
 import { verifyJWT, decodeJWT, verifyRefreshTokenFormat } from '../utils/jwt';
 import { hash } from '../utils/crypto';
 import { readSelect, remove } from '../database/utils/operations';

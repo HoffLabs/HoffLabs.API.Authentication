@@ -5,6 +5,12 @@ import rateLimit from '@fastify/rate-limit';
 import jwt from '@fastify/jwt';
 import authRoutes from './routes/auth';
 import jwtRoutes from './routes/jwt';
+import adminRoutes from './routes/admin';
+import analyticsRoutes from './routes/analytics';
+import deviceRoutes from './routes/devices';
+import apiKeyRoutes from './routes/api-keys';
+import notificationRoutes from './routes/notifications';
+import emailRoutes from './routes/email';
 import { ENCRYPTION_KEY, JWT_SECRET, DB_HOST, DB_PORT, DB_USERNAME, DB_PASSWORD, DATABASE  } from './config/env';
 import { registerSwagger } from './config/swagger';
 import cookie from '@fastify/cookie';
@@ -34,8 +40,18 @@ async function startup() {
     secret: JWT_SECRET
   });
   
+  // Core routes
   fastify.register(authRoutes, { prefix: '/auth' });
   fastify.register(jwtRoutes, { prefix: '/jwt' });
+  
+  // Enterprise routes (placeholder implementations)
+  fastify.register(adminRoutes, { prefix: '/admin' });
+  fastify.register(analyticsRoutes, { prefix: '/analytics' });
+  fastify.register(deviceRoutes, { prefix: '/devices' });
+  fastify.register(apiKeyRoutes, { prefix: '/api-keys' });
+  fastify.register(notificationRoutes, { prefix: '/notifications' });
+  fastify.register(emailRoutes, { prefix: '/email' });
+  
   fastify.register(cookie);
   
   fastify.listen({ port: 3030 }, (err) => {

@@ -12,20 +12,20 @@ import {
   generateEmailVerificationEmail,
   sendPasswordResetEmail,
   sendEmailVerificationEmail
-} from '../services/email';
+} from '../services/auth/email';
 import {
   sendVerificationEmailService,
   verifyEmailService,
   validateVerificationTokenService,
   resendVerificationEmailService,
   generateVerificationToken
-} from '../services/emailVerification';
+} from '../services/auth/emailVerification';
 import {
   requestPasswordResetService,
   validateResetTokenService,
   resetPasswordService,
   generateResetToken
-} from '../services/passwordReset';
+} from '../services/auth/passwordReset';
 
 describe('Email Functionality Tests', () => {
   beforeAll(async () => {
