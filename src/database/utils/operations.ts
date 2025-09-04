@@ -28,13 +28,30 @@ export async function executeQuery<T extends QueryResultRow>(query: QueryParams)
   }
 }
 
+// Whitelist of allowed table names for security
+const ALLOWED_TABLES = [
+  'users',
+  'user_sessions', 
+  'user_login_history',
+  'email_verifications',
+  'password_resets'
+];
+
+function validateTableName(table: string): string {
+  if (!ALLOWED_TABLES.includes(table)) {
+    throw new Error(`Invalid table name: ${table}`);
+  }
+  return table;
+}
+
 export async function create<T extends QueryResultRow>(table: string, data: Record<string, any>): Promise<T> {
+  const validatedTable = validateTableName(table);
   const columns = Object.keys(data).join(', ');
   const values = Object.values(data);
   const placeholders = values.map((_, i) => `$${i + 1}`).join(', ');
   
   const query = {
-    text: `INSERT INTO ${table} (${columns}) VALUES (${placeholders}) RETURNING *`,
+    text: `INSERT INTO ${validatedTable} (${columns}) VALUES (${placeholders}) RETURNING *`,
     values,
   };
   
@@ -43,8 +60,9 @@ export async function create<T extends QueryResultRow>(table: string, data: Reco
 }
 
 export async function read<T extends QueryResultRow>(table: string, id: number | string): Promise<T | null> {
+  const validatedTable = validateTableName(table);
   const query = {
-    text: `SELECT * FROM ${table} WHERE id = $1`,
+    text: `SELECT * FROM ${validatedTable} WHERE id = $1`,
     values: [id],
   };
   
@@ -63,8 +81,9 @@ export async function readSpecific<T extends QueryResultRow>(
   validateUser?: boolean,
   andCondition?: { column: string; value: unknown | string }
 ): Promise<number | T | null> {
+  const validatedTable = validateTableName(table);
   const values: (unknown | string)[] = [value];
-  let queryText = `SELECT * FROM ${table} WHERE ${id} = $1`;
+  let queryText = `SELECT * FROM ${validatedTable} WHERE ${id} = $1`;
   if(validateUser && andCondition) {
     const query = {
       text: queryText,
@@ -102,8 +121,9 @@ export async function readSpecific<T extends QueryResultRow>(
 }
 
 export async function readSelect<T extends QueryResultRow>(table: string, columns: string[], conditions?: Record<string, any>): Promise<T[]> {
+  const validatedTable = validateTableName(table);
   const selectClause = columns.join(', ');
-  let queryText = `SELECT ${selectClause} FROM ${table}`;
+  let queryText = `SELECT ${selectClause} FROM ${validatedTable}`;
   const values: any[] = [];
   
   if (conditions && Object.keys(conditions).length > 0) {
@@ -120,6 +140,7 @@ export async function readSelect<T extends QueryResultRow>(table: string, column
 }
 
 export async function update<T extends QueryResultRow>(table: string, id: number | string, data: Record<string, any>): Promise<T> {
+  const validatedTable = validateTableName(table);
   const setClause = Object.keys(data)
     .map((key, i) => `${key} = $${i + 1}`)
     .join(', ');
@@ -127,7 +148,7 @@ export async function update<T extends QueryResultRow>(table: string, id: number
   values.push(id);
   
   const query = {
-    text: `UPDATE ${table} SET ${setClause} WHERE id = $${values.length} RETURNING *`,
+    text: `UPDATE ${validatedTable} SET ${setClause} WHERE id = $${values.length} RETURNING *`,
     values,
   };
   
@@ -139,8 +160,9 @@ export async function update<T extends QueryResultRow>(table: string, id: number
 }
 
 export async function remove(table: string, id: number | string): Promise<boolean> {
+  const validatedTable = validateTableName(table);
   const query = {
-    text: `DELETE FROM ${table} WHERE id = $1`,
+    text: `DELETE FROM ${validatedTable} WHERE id = $1`,
     values: [id],
   };
   

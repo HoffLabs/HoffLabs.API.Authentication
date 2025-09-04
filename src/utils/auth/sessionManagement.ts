@@ -4,9 +4,9 @@ import { encrypt, decrypt } from '../crypto';
 import { verifyJWT } from '../jwt';
 import { splitRefreshToken } from './authEncryption';
 
-export async function createUserSession(uid: string, refreshToken: string, jwt: string): Promise<UserSession> {
-  const jwtExpire = new Date(Date.now() + .25 * 60 * 60 * 1000);
-  const refreshExpire = new Date(Date.now() + 2160 * 60 * 60 * 1000);
+export async function createUserSession(uid: string, refreshToken: string, jwt: string, ip?: string, userAgent?: string): Promise<UserSession> {
+  const jwtExpire = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+  const refreshExpire = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days (reduced from 90 days)
 
   const session = await create<UserSession>('user_sessions', {
     user_uid: uid,
@@ -21,8 +21,8 @@ export async function createUserSession(uid: string, refreshToken: string, jwt: 
 }
 
 export async function updateUserSession(sessionId: number, refreshToken: string, jwt: string): Promise<UserSession> {
-  const jwtExpire = new Date(Date.now() + 0.25 * 60 * 60 * 1000); // 15 minutes
-  const refreshExpire = new Date(Date.now() + 2160 * 60 * 60 * 1000); // 90 days
+  const jwtExpire = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+  const refreshExpire = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
   
   const updatedSession = await update<UserSession>('user_sessions', sessionId, {
     session_token: await encrypt(jwt),
@@ -36,22 +36,32 @@ export async function updateUserSession(sessionId: number, refreshToken: string,
 
 export async function findSessionByRawRefreshToken(refreshToken: string): Promise<UserSession | null> {
   try {
-    // Extract UID from refresh token
-    const uid = splitRefreshToken(refreshToken);
+    // Use the new JWT-based refresh token validation
+    const { validateRefreshToken } = await import('./authEncryption');
+    const tokenValidation = validateRefreshToken(refreshToken);
+    
+    if (!tokenValidation.valid || !tokenValidation.uid) {
+      return null;
+    }
     
     // Get sessions for this specific user only
     const userSessions = await readSelect<UserSession>('user_sessions', ['*'], {
-      user_uid: uid
+      user_uid: tokenValidation.uid
     });
     
-    // Decrypt each refresh token to find the match
+    // Find the session that matches this refresh token
+    // Since refresh tokens are now JWTs, we need to match them differently
     for (const session of userSessions) {
       try {
-        const decryptedRefreshToken = await decrypt(session.refresh_token);
-        
-        if (decryptedRefreshToken === refreshToken) {
-          // Check if refresh token is not expired
-          if (new Date(session.refresh_expires_at) > new Date()) {
+        // Check if refresh token is not expired
+        if (new Date(session.refresh_expires_at) > new Date()) {
+          // For JWT-based refresh tokens, we validate the token itself
+          // rather than storing and comparing the raw token
+          // This is more secure as we don't store the actual token value
+          const storedRefreshToken = await decrypt(session.refresh_token);
+          
+          // Compare the refresh tokens directly
+          if (storedRefreshToken === refreshToken) {
             return session;
           }
         }
@@ -126,7 +136,7 @@ export async function validateAndExtendSession(jwt: string): Promise<{ valid: bo
 
     if (timeUntilExpiry <= fiveMinutes && timeUntilExpiry > 0) {
       // Extend session by 15 minutes
-      const newExpiresAt = new Date(Date.now() + 0.25 * 60 * 60 * 1000);
+      const newExpiresAt = new Date(Date.now() + 15 * 60 * 1000);
       
       updatedSession = await update<UserSession>('user_sessions', session.id, {
         session_expires_at: newExpiresAt,

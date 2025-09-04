@@ -26,7 +26,10 @@ export const getActiveSessionsService = async (uid: string, currentSessionId?: n
     // Filter out expired sessions and format response
     const now = new Date();
     const activeSessions = sessions
-      .filter(session => new Date(session.refresh_expires_at) > now)
+      .filter(session => {
+        const expires = new Date(session.refresh_expires_at);
+        return expires > now;
+      })
       .map(session => ({
         id: session.id,
         created_at: session.created_at,
@@ -38,7 +41,6 @@ export const getActiveSessionsService = async (uid: string, currentSessionId?: n
 
     return activeSessions;
   } catch (error) {
-    console.error('Get active sessions service error:', error);
     return [];
   }
 };
@@ -97,8 +99,20 @@ export const revokeAllOtherSessionsService = async (uid: string, currentSessionI
 
 export const getLoginHistoryService = async (uid: string, limit: number = 50): Promise<LoginHistoryInfo[]> => {
   try {
-    // Get login history for the user (most recent first)
-    const history = await readSelect<UserLoginHistory>('user_login_history', ['*'], { user_uid: uid });
+    // Try with user_uid field first (main schema)
+    let history: UserLoginHistory[] = [];
+    
+    try {
+      history = await readSelect<UserLoginHistory>('user_login_history', ['*'], { user_uid: uid });
+    } catch (uidError) {
+      console.warn('Failed to query with user_uid, trying user_id:', uidError);
+      // If user_uid fails, try with user_id field (alternate schema)
+      // First get the user's numeric ID from the uid
+      const users = await readSelect<any>('users', ['id'], { uid: uid });
+      if (users.length > 0) {
+        history = await readSelect<UserLoginHistory>('user_login_history', ['*'], { user_id: users[0].id });
+      }
+    }
     
     // Sort by login_at descending and limit results
     const sortedHistory = history
@@ -107,7 +121,7 @@ export const getLoginHistoryService = async (uid: string, limit: number = 50): P
       .map(entry => ({
         id: entry.id,
         login_at: entry.login_at,
-        login_ip: entry.login_ip,
+        login_ip: entry.login_ip ? (typeof entry.login_ip === 'string' ? entry.login_ip : null) : null,
         user_agent: entry.user_agent,
         auth_method: entry.auth_method
       }));

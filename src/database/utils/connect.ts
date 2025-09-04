@@ -1,6 +1,6 @@
 
 import { Pool, Client } from 'pg';
-import { DB_HOST, DB_PORT, DB_USERNAME, DB_PASSWORD, DATABASE } from '../../config/env';
+import { DB_HOST, DB_PORT, DB_USERNAME, DB_PASSWORD, DATABASE } from '../../config/environment';
 
 interface PostgresConfig {
     host: string;

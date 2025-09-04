@@ -261,8 +261,24 @@ export default async function authRoutes(fastify: FastifyInstance) {
       security: [{ bearerAuth: [] }],
       response: {
         200: {
-          type: 'array',
-          items: SessionSchema
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            sessions: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  id: { type: 'number' },
+                  created_at: { type: 'string', format: 'date-time' },
+                  session_expires_at: { type: 'string', format: 'date-time' },
+                  refresh_expires_at: { type: 'string', format: 'date-time' },
+                  is_current: { type: 'boolean' }
+                }
+              }
+            },
+            total_sessions: { type: 'number' }
+          }
         },
         401: ErrorSchema
       }
@@ -322,16 +338,24 @@ export default async function authRoutes(fastify: FastifyInstance) {
       security: [{ bearerAuth: [] }],
       response: {
         200: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              id: { type: 'string', format: 'uuid' },
-              login_ip: { type: 'string' },
-              user_agent: { type: 'string' },
-              login_time: { type: 'string', format: 'date-time' },
-              success: { type: 'boolean' }
-            }
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            login_history: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  id: { type: 'number' },
+                  login_at: { type: 'string', format: 'date-time' },
+                  login_ip: { type: ['string', 'null'] },
+                  user_agent: { type: ['string', 'null'] },
+                  auth_method: { type: ['string', 'null'] }
+                }
+              }
+            },
+            total_entries: { type: 'number' },
+            limit_applied: { type: 'number' }
           }
         },
         401: ErrorSchema

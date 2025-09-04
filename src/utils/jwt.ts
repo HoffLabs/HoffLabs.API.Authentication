@@ -1,4 +1,4 @@
-import { JWT_SECRET } from '../config/env';
+import { JWT_SECRET } from '../config/environment';
 import jwt from 'jsonwebtoken';
 
 export const verifyJWT = (token: string): any => {

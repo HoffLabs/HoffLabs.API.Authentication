@@ -15,7 +15,7 @@ export async function createUser(userData: Partial<User>): Promise<User> {
       email_hash: hash(userData.email as string),
       first_name: '',
       last_name: '',
-      password_hash: await encryptPassword(userData.password_hash as string) as unknown as string,
+      password_hash: userData.password_hash as string, // Already encrypted by controller
       role_id: 3,
       sub_roles: [],
       is_active: true,

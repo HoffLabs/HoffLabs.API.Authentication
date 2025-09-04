@@ -1,5 +1,5 @@
 import nodemailer from 'nodemailer';
-import { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, BACKEND_API_URL, TEST_EMAIL_RECIPIENT } from '../../config/env';
+import { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, BACKEND_API_URL, TEST_EMAIL_RECIPIENT } from '../../config/environment';
 
 export interface EmailOptions {
   to: string;

@@ -6,7 +6,7 @@ import { readUID } from '../../database/auth/auth-operations';
 
 import { type User, type Cookie } from '../../interfaces/auth/user';
 import jwt from 'jsonwebtoken';
-import { JWT_SECRET } from '../../config/env';
+import { ENCRYPTION_KEY, JWT_SECRET } from '../../config/environment';
 
 const ENCRYPTION_ALGORITHM = 'aes-256-cbc';
 
@@ -19,33 +19,83 @@ export async function generateUID(): Promise<string> {
 }
 
 export function generateRefreshToken(uid: string): string {
-  return uid + randomBytes(32).toString('hex');
+  // Create a completely opaque token that doesn't expose any user data
+  const tokenData = {
+    uid,
+    random: randomBytes(32).toString('hex'),
+    issued: Date.now(),
+    nonce: randomBytes(16).toString('hex')
+  };
+  
+  // Create a secure token using JWT for better security and validation
+  const refreshToken = jwt.sign(
+    { 
+      sub: uid, 
+      type: 'refresh',
+      nonce: tokenData.nonce,
+      iat: Math.floor(Date.now() / 1000)
+    },
+    JWT_SECRET,
+    {
+      expiresIn: '7d', // Refresh tokens last longer
+      algorithm: 'HS256',
+      issuer: 'hofflabs-api',
+      audience: 'hofflabs-refresh'
+    }
+  );
+  
+  return refreshToken;
 }
 
 export function createJWT(uid: string) {
   const jwtToken = jwt.sign(createCookie(uid) as unknown as Cookie, JWT_SECRET, {
-    expiresIn: '30m',
-    algorithm: 'HS256'
+    expiresIn: '15m', // Reduced from 30m for better security
+    algorithm: 'HS256',
+    issuer: 'hofflabs-api',
+    audience: 'hofflabs-users',
+    jwtid: randomBytes(16).toString('hex') // Add unique JWT ID
   });
   return jwtToken;
 }
 
 function createCookie(uid: string) {
-  return { sub: uid }
+  return { 
+    sub: uid,
+    iat: Math.floor(Date.now() / 1000), // Add issued at timestamp
+    type: 'access'
+  };
 }
 
 
+// Validate and extract UID from JWT-based refresh token
+export function validateRefreshToken(refreshToken: string): { uid: string; valid: boolean } {
+  try {
+    const decoded = jwt.verify(refreshToken, JWT_SECRET, {
+      issuer: 'hofflabs-api',
+      audience: 'hofflabs-refresh'
+    }) as any;
+    
+    if (decoded.type !== 'refresh') {
+      return { uid: '', valid: false };
+    }
+    
+    return { uid: decoded.sub, valid: true };
+  } catch (error) {
+    return { uid: '', valid: false };
+  }
+}
+
+// Legacy function - deprecated, use validateRefreshToken instead
 export function splitRefreshToken(refreshToken: string): string {
-  const uidLength = 64; // UID is 32 bytes = 64 hex characters
-  const uid = refreshToken.slice(0, uidLength);
-  const randomPart = refreshToken.slice(uidLength);
-  return uid;
+  console.warn('splitRefreshToken is deprecated - use validateRefreshToken instead');
+  const result = validateRefreshToken(refreshToken);
+  return result.valid ? result.uid : '';
 }
 
 export async function hashPassword(password: string): Promise<string> {
-  const salt = await bcrypt.genSalt(13);
+  const salt = await bcrypt.genSalt(14); // Increased from 13 for better security
   const hash = await bcrypt.hash(password, salt);
-  return `${salt}:${hash}`;
+  return hash; // bcrypt handles salt internally, no need to separate
 }
 
 export async function encryptPassword(password: string): Promise<string> {
@@ -53,13 +103,21 @@ export async function encryptPassword(password: string): Promise<string> {
 }
 
 export async function verifyPassword(password: string, encryptedStoredHash: string): Promise<boolean> {
-  const storedHash = await decrypt(encryptedStoredHash);
-  const [salt, hash] = storedHash.split(':');
-
-  if (!salt || !hash) {
+  try {
+    const storedHash = await decrypt(encryptedStoredHash);
+    
+    // Use bcrypt.compare for proper verification
+    const isValid = await bcrypt.compare(password, storedHash);
+    
+    // Add artificial delay to prevent timing attacks
+    const delay = 100 + Math.random() * 50; // 100-150ms
+    await new Promise(resolve => setTimeout(resolve, delay));
+    
+    return isValid;
+  } catch (error) {
+    // Add artificial delay for error cases too
+    const delay = 100 + Math.random() * 50;
+    await new Promise(resolve => setTimeout(resolve, delay));
     return false;
   }
-
-  const hashedInput = await bcrypt.hash(password, salt);
-  return hashedInput === hash;
 }
