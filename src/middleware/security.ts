@@ -2,12 +2,20 @@ import { FastifyRequest, FastifyReply } from 'fastify';
 
 // Security middleware for authentication endpoints
 export const securityMiddleware = async (request: FastifyRequest, reply: FastifyReply) => {
-  // Add security headers
+  // Add comprehensive security headers
   reply.header('X-Content-Type-Options', 'nosniff');
   reply.header('X-Frame-Options', 'DENY');
   reply.header('X-XSS-Protection', '1; mode=block');
   reply.header('Referrer-Policy', 'strict-origin-when-cross-origin');
-  reply.header('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  reply.header('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=(), usb=()');
+  reply.header('X-Permitted-Cross-Domain-Policies', 'none');
+  reply.header('Cross-Origin-Embedder-Policy', 'require-corp');
+  reply.header('Cross-Origin-Opener-Policy', 'same-origin');
+  reply.header('Cross-Origin-Resource-Policy', 'same-origin');
+  
+  // Remove server identification
+  reply.removeHeader('Server');
+  reply.removeHeader('X-Powered-By');
   
   // Add cache control headers for sensitive endpoints
   if (request.url.includes('/auth/') || request.url.includes('/jwt/')) {

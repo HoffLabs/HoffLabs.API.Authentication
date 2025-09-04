@@ -1,10 +1,12 @@
-import { UserSession } from '../../interfaces/auth/user';
+import { UserSession, User } from '../../interfaces/auth/user';
 import { findSessionByRawRefreshToken, updateUserSession } from '../../utils/auth/sessionManagement';
 import { createJWT, generateRefreshToken, splitRefreshToken } from '../../utils/auth/authEncryption';
 import { verifyRefreshTokenFormat } from '../../utils/jwt';
+import { getProfileByUid } from './profile';
 
 export interface RefreshTokenResponse {
   user_uid: string;
+  user: User; // Add full user object
   jwt: string;
   refresh_token: string;
   jwt_expiry: Date;
@@ -26,6 +28,12 @@ export const refreshTokenService = async (refreshToken: string): Promise<Refresh
       throw new Error('Invalid or expired refresh token');
     }
 
+    // Get full user data for the response
+    const user = await getProfileByUid(session.user_uid);
+    if (!user) {
+      throw new Error('User not found');
+    }
+
     // Generate new tokens using session's user_uid
     const newJwt = createJWT(session.user_uid);
     const newRefreshToken = generateRefreshToken(session.user_uid);
@@ -35,6 +43,7 @@ export const refreshTokenService = async (refreshToken: string): Promise<Refresh
 
     return {
       user_uid: session.user_uid,
+      user: user, // Include full user object
       jwt: newJwt,
       refresh_token: newRefreshToken,
       jwt_expiry: updatedSession.session_expires_at,

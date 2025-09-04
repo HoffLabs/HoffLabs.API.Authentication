@@ -515,23 +515,6 @@ All endpoints return consistent error responses with:
     },
     transformSpecificationClone: true
   });
-
-  // Add route to get OpenAPI spec as JSON
-  fastify.get('/api-spec.json', {
-    schema: {
-      tags: ['Documentation'],
-      summary: 'Get OpenAPI specification',
-      description: 'Returns the complete OpenAPI specification as JSON',
-      response: {
-        200: {
-          type: 'object',
-          description: 'OpenAPI specification'
-        }
-      }
-    }
-  }, async (request, reply) => {
-    reply.send(fastify.swagger());
-  });
 };
 
 export default registerEnhancedSwagger;

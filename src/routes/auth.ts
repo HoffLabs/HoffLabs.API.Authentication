@@ -136,9 +136,11 @@ export default async function authRoutes(fastify: FastifyInstance) {
       description: 'Generate new access token using refresh token',
       body: {
         type: 'object',
-        required: ['refresh_token'],
         properties: {
-          refresh_token: { type: 'string', description: 'Valid refresh token' }
+          refresh_token: { 
+            type: 'string', 
+            description: 'Valid refresh token (optional - will use HttpOnly cookie if not provided)' 
+          }
         }
       },
       response: {
@@ -155,9 +157,11 @@ export default async function authRoutes(fastify: FastifyInstance) {
       description: 'Check if refresh token is valid',
       body: {
         type: 'object',
-        required: ['refresh_token'],
         properties: {
-          refresh_token: { type: 'string', description: 'Refresh token to validate' }
+          refresh_token: { 
+            type: 'string', 
+            description: 'Refresh token to validate (optional - will use HttpOnly cookie if not provided)' 
+          }
         }
       },
       response: {

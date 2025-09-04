@@ -73,22 +73,4 @@ export default async function jwtRoutes(fastify: FastifyInstance) {
       }
     }
   }, getTokenInfo);
-  
-  // Health check
-  fastify.get('/health', {
-    schema: {
-      tags: ['Health'],
-      summary: 'JWT service health check',
-      description: 'Check JWT utilities service health',
-      response: {
-        200: HealthCheckSchema
-      }
-    }
-  }, async (request, reply) => {
-    reply.send({
-      service: 'JWT Utilities Service',
-      status: 'healthy',
-      timestamp: new Date().toISOString()
-    });
-  });
 }

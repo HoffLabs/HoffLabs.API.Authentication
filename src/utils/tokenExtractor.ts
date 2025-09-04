@@ -6,14 +6,20 @@ interface RequestWithToken {
 }
 
 /**
- * Extracts JWT token from request body or Authorization header
- * Supports both "Bearer token" and plain token formats
+ * Extracts JWT token from HttpOnly cookies, with fallback to request body or Authorization header
+ * Prioritizes secure HttpOnly cookie over less secure alternatives
  */
 export function extractTokenFromRequest(request: FastifyRequest<RequestWithToken>): string | null {
-  // Try to get token from request body first
+  // Priority 1: Try to get token from HttpOnly cookie (most secure)
+  const cookieToken = request.cookies?.access_token;
+  if (cookieToken) {
+    return cookieToken;
+  }
+  
+  // Priority 2: Try to get token from request body (for backward compatibility)
   let token = request.body?.token;
   
-  // If not in body, check Authorization header
+  // Priority 3: Check Authorization header (for backward compatibility)
   if (!token && request.headers.authorization) {
     const authHeader = request.headers.authorization;
     if (authHeader.startsWith('Bearer ')) {
@@ -27,9 +33,28 @@ export function extractTokenFromRequest(request: FastifyRequest<RequestWithToken
 }
 
 /**
+ * Extracts refresh token from HttpOnly cookie, with fallback to request body
+ */
+export function extractRefreshTokenFromRequest(request: FastifyRequest<any>): string | null {
+  // Priority 1: Try to get refresh token from HttpOnly cookie (most secure)
+  const cookieRefreshToken = request.cookies?.refresh_token;
+  if (cookieRefreshToken) {
+    return cookieRefreshToken;
+  }
+  
+  // Priority 2: Try to get refresh token from request body (for backward compatibility)
+  const bodyRefreshToken = request.body?.refresh_token;
+  if (bodyRefreshToken) {
+    return bodyRefreshToken;
+  }
+  
+  return null;
+}
+
+/**
  * Standardized error response for missing token
  */
 export const MISSING_TOKEN_ERROR = {
   error: 'Token is required',
-  message: 'Provide token in request body or Authorization header'
+  message: 'Authentication token is missing. Ensure you are logged in and cookies are enabled.'
 };

@@ -34,8 +34,8 @@ function validateUsername(username: string): boolean {
 function validatePassword(password: string): { valid: boolean; errors: string[] } {
   const errors: string[] = [];
   
-  if (password.length < 8) {
-    errors.push('Password must be at least 8 characters long');
+  if (password.length < 12) {
+    errors.push('Password must be at least 12 characters long');
   }
   if (password.length > 128) {
     errors.push('Password must be less than 128 characters');
@@ -51,6 +51,17 @@ function validatePassword(password: string): { valid: boolean; errors: string[] 
   }
   if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
     errors.push('Password must contain at least one special character');
+  }
+  
+  // Check for common weak passwords
+  const commonPasswords = ['password', '123456', 'qwerty', 'admin', 'letmein', 'welcome'];
+  if (commonPasswords.some(weak => password.toLowerCase().includes(weak))) {
+    errors.push('Password contains common weak patterns');
+  }
+  
+  // Check for sequential characters
+  if (/123|abc|qwe/i.test(password)) {
+    errors.push('Password should not contain sequential characters');
   }
   
   return { valid: errors.length === 0, errors };
@@ -76,12 +87,49 @@ export const login = async (request: FastifyRequest<{ Body: AuthBody }>, reply: 
   }
   
   if (response.success) {
+    // Set secure httpOnly cookies for tokens and user data
+    const isProduction = process.env.NODE_ENV === 'production';
+    
+    // Access token cookie (15 minutes)
+    reply.setCookie('access_token', response.access_token, {
+      httpOnly: true,
+      secure: isProduction, // Only HTTPS in production
+      sameSite: 'strict',
+      maxAge: 15 * 60 * 1000, // 15 minutes
+      path: '/'
+    });
+    
+    // Refresh token cookie (7 days)
+    reply.setCookie('refresh_token', response.refresh_token, {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      path: '/'
+    });
+    
+    // User data cookie (non-httpOnly for frontend access, but still secure)
+    reply.setCookie('user_data', JSON.stringify({
+      uid: response.user?.uid,
+      username: response.user?.username,
+      email: response.user?.email,
+      email_verified: response.user?.email_verified,
+      created_at: response.user?.created_at,
+      first_name: response.user?.first_name,
+      last_name: response.user?.last_name
+    }), {
+      httpOnly: false, // Frontend needs to read user data
+      secure: isProduction,
+      sameSite: 'strict',
+      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+      path: '/'
+    });
+    
+    // Send minimal response (tokens are now in cookies)
     reply.send({
-      user_uid: response.user_uid,
+      success: true,
+      message: 'Login successful',
       user: response.user,
-      access_token: response.access_token,
-      jwt: response.access_token, // Add jwt alias for test compatibility
-      refresh_token: response.refresh_token,
       expires_in: response.expires_in
     });
   } else {

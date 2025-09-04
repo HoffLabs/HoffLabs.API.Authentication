@@ -117,11 +117,40 @@ export const resetPassword = async (
       });
     }
 
-    // Basic password validation
-    if (new_password.length < 8) {
+    // Basic password validation using the same validation as registration
+    const { validatePassword } = await import('../auth');
+    
+    // Use stronger password validation
+    if (new_password.length < 12) {
       return reply.status(400).send({
         error: 'Invalid password',
-        message: 'Password must be at least 8 characters long'
+        message: 'Password must be at least 12 characters long and meet security requirements'
+      });
+    }
+    
+    // Additional security checks
+    if (!/[a-z]/.test(new_password)) {
+      return reply.status(400).send({
+        error: 'Invalid password',
+        message: 'Password must contain at least one lowercase letter'
+      });
+    }
+    if (!/[A-Z]/.test(new_password)) {
+      return reply.status(400).send({
+        error: 'Invalid password',
+        message: 'Password must contain at least one uppercase letter'
+      });
+    }
+    if (!/\d/.test(new_password)) {
+      return reply.status(400).send({
+        error: 'Invalid password',
+        message: 'Password must contain at least one number'
+      });
+    }
+    if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(new_password)) {
+      return reply.status(400).send({
+        error: 'Invalid password',
+        message: 'Password must contain at least one special character'
       });
     }
 

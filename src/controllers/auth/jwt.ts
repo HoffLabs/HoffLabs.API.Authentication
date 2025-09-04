@@ -2,7 +2,7 @@ import { FastifyRequest, FastifyReply } from 'fastify';
 import { verifyJWT, decodeJWT } from '../../utils/jwt';
 import { refreshTokenService, validateRefreshTokenService } from '../../services/auth/refresh';
 import { validateAndExtendSession, invalidateSession, findSessionByJWT } from '../../utils/auth/sessionManagement';
-import { extractTokenFromRequest, MISSING_TOKEN_ERROR } from '../../utils/tokenExtractor';
+import { extractTokenFromRequest, extractRefreshTokenFromRequest, MISSING_TOKEN_ERROR } from '../../utils/tokenExtractor';
 
 interface JWTVerifyBody {
   token: string;
@@ -174,12 +174,13 @@ export const refreshToken = async (
   reply: FastifyReply
 ) => {
   try {
-    const { refresh_token } = request.body;
+    // Extract refresh token from HttpOnly cookie or request body (for backward compatibility)
+    const refresh_token = extractRefreshTokenFromRequest(request);
 
     if (!refresh_token) {
       return reply.status(400).send({
         error: 'Refresh token is required',
-        message: 'Provide refresh_token in request body'
+        message: 'Refresh token is missing. Ensure you are logged in and cookies are enabled.'
       });
     }
 
@@ -193,16 +194,48 @@ export const refreshToken = async (
       });
     }
 
+    // Set secure httpOnly cookies for refreshed tokens and user data
+    const isProduction = process.env.NODE_ENV === 'production';
+    
+    // Access token cookie (15 minutes)
+    reply.setCookie('access_token', result.jwt, {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: 'strict',
+      maxAge: 15 * 60 * 1000, // 15 minutes
+      path: '/'
+    });
+    
+    // Refresh token cookie (7 days)
+    reply.setCookie('refresh_token', result.refresh_token, {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      path: '/'
+    });
+    
+    // User data cookie (non-httpOnly for frontend access)
+    reply.setCookie('user_data', JSON.stringify({
+      uid: result.user?.uid,
+      username: result.user?.username,
+      email: result.user?.email,
+      email_verified: result.user?.email_verified,
+      created_at: result.user?.created_at,
+      first_name: result.user?.first_name,
+      last_name: result.user?.last_name
+    }), {
+      httpOnly: false, // Frontend needs to read user data
+      secure: isProduction,
+      sameSite: 'strict',
+      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+      path: '/'
+    });
+    
     reply.send({
       success: true,
       message: 'Tokens refreshed successfully',
-      data: {
-        user_uid: result.user_uid,
-        jwt: result.jwt,
-        refresh_token: result.refresh_token,
-        jwt_expiry: result.jwt_expiry,
-        refresh_token_expiry: result.refresh_token_expiry
-      },
+      user: result.user, // Include user object in response too
       refreshed_at: new Date().toISOString()
     });
 
@@ -221,12 +254,13 @@ export const validateRefreshToken = async (
   reply: FastifyReply
 ) => {
   try {
-    const { refresh_token } = request.body;
+    // Extract refresh token from HttpOnly cookie or request body (for backward compatibility)
+    const refresh_token = extractRefreshTokenFromRequest(request);
 
     if (!refresh_token) {
       return reply.status(400).send({
         error: 'Refresh token is required',
-        message: 'Provide refresh_token in request body'
+        message: 'Refresh token is missing. Ensure you are logged in and cookies are enabled.'
       });
     }
 
@@ -274,6 +308,11 @@ export const invalidateToken = async (
     }
     
     await invalidateSession(session.id);
+    
+    // Clear authentication cookies
+    reply.clearCookie('access_token', { path: '/' });
+    reply.clearCookie('refresh_token', { path: '/' });
+    reply.clearCookie('user_data', { path: '/' });
     
     reply.send({
       success: true,
